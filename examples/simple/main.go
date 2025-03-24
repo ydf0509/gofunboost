@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"log"
+	"time"
 
 	"github.com/gofunboost/boost"
 	"github.com/gofunboost/broker"
@@ -23,46 +23,79 @@ func printValue(a interface{}) {
 }
 
 func main() {
-
-		// 创建增强函数选项
-		addOptions := boost.NewBoostOptions("queue_test",boost.WithQPSLimit(0.2))
-	
-		printOptions := boost.BoostOptions{
-			QueueName:     "queue_test2",
-			BrokerKind:    broker.REDIS,
-			ConcurrentNum: 50,
-			QPSLimit:      500,
-			MaxRetries:    3,
-			Timeout:       60,
-			BrokerConfig: broker.Config{
-				Address: "localhost:6379",
+	// 创建加法函数的Broker
+	addOptions := boost.BoostOptions{
+		QueueName:     "queue_test2",
+		ConsumeFunc:   add,
+		BrokerKind:    broker.REDIS,
+		ConnNum:       5,
+		ConcurrentNum: 50,
+		QPSLimit:      500,
+		MaxRetries:    3,
+		BrokerConfig: broker.Config{
+			BrokerUrl: "localhost:6379",
+			BrokerTransportOptions: map[string]interface{}{
+				"special1": 123,
 			},
-		}
-
-	// 创建增强函数
-	addFunc := boost.Boost(*addOptions)(add)
-	printFunc := boost.Boost(printOptions)(printValue)
-
-	// 启动消费者
-	addFunc.Consume()
-	printFunc.Consume()
-
-	// 推送任务到队列
-	for i := 0; i < 100; i++ {
-		// err := addFunc.Push(i, i*2)
-		// if err != nil {
-		// 	fmt.Printf("推送add任务失败: %v\n", err)
-		// }
-
-		// err = printFunc.Push(i)
-		// if err != nil {
-		// 	fmt.Printf("推送print任务失败: %v\n", err)
-		// }
-		addFunc.Push(i, i*2)
-		printFunc.Push(i)
+		},
 	}
 
-	// 使用channel阻塞主程序，等待手动终止
-	forever := make(chan struct{})
-	<-forever
+	addBooster, err := boost.NewBroker(addOptions)
+	if err != nil {
+		log.Fatalf("Failed to create add booster: %v", err)
+	}
+
+	// 创建打印函数的Broker
+	printValueOptions := boost.BoostOptions{
+		QueueName:     "queue_test33",
+		ConsumeFunc:   printValue,
+		BrokerKind:    broker.REDIS,
+		ConnNum:       5,
+		ConcurrentNum: 20,
+		QPSLimit:      500,
+		MaxRetries:    3,
+		BrokerConfig: broker.Config{
+			BrokerUrl: "localhost:6379",
+			BrokerTransportOptions: map[string]interface{}{
+				"special1": 123,
+				"special2": "aaaa",
+			},
+		},
+	}
+
+	printValueBooster, err := boost.NewBroker(printValueOptions)
+	if err != nil {
+		log.Fatalf("Failed to create print value booster: %v", err)
+	}
+
+	// 启动消费
+	go func() {
+		if err := addBooster.Consume(); err != nil {
+			log.Printf("Add booster consume error: %v", err)
+		}
+	}()
+
+	go func() {
+		if err := printValueBooster.Consume(); err != nil {
+			log.Printf("Print value booster consume error: %v", err)
+		}
+	}()
+
+	// 推送消息
+	for i := 0; i < 10; i++ {
+		if err := addBooster.Push(i, i*2); err != nil {
+			log.Printf("Failed to push to add booster: %v", err)
+		}
+
+		if err := printValueBooster.Push(fmt.Sprintf("hello world %d", i)); err != nil {
+			log.Printf("Failed to push to print value booster: %v", err)
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// 阻塞进程，让所有协程池一直运行
+	for {
+		time.Sleep(10 * time.Second)
+	}
 }

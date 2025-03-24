@@ -26,18 +26,24 @@ if __name__ == '__main__':
         fun.push(i)
 ```
 
-# 3. 首期要兼容redis rabbimtq 内存  作为broker ，保留扩展任意消息队列作为broker的队列
+# 3. 首期要兼容redis rabbimtq 内存  作为broker ，保留扩展任意消息队列作为broker的队列。
+各种中间件类型的Broker类需要继承自父类BaseBroker
 
-# 4. 支持设置 broker类型 conn连接数量 并发数量  qps控频 函数重试次数  这些功能。
+# 4. 支持设置 Broker类型 conn连接数量 并发数量  qps控频 函数重试次数  这些功能,Broker类型需要支持以下方法。
 
 
 ## 4.1 Consume 函数
 
-Consume 函数里面是for循环 ConnNum次数go 协程调用 ConsumeUsingOneConn 函数，ConsumeUsingOneConn 函数里面是for循环，从消息队列拉取消息，丢给协程池去运行。
+Consume 函数里面是for循环 ConnNum次数go 协程调用 ConsumeUsingOneConn 函数，ConsumeUsingOneConn 函数里面是for循环，从消息队列拉取消息，丢给协程池去运行，不是在拉取协程本身去执行消费函数。使用已有的 GoEasyPool 去运行协程。
 ConsumeUsingOneConn 函数里面如果拉取消息失败，每隔60秒要重新尝试新建连接，不要直接返回错误和退出。Consume不管遇到断网还是中间件崩溃了都不要退出。 
 
-## 4.2 Push函数如果报错，要
+## 4.2 Push函数如果报错
 Push函数如果报错，要重试3次重新连接中间件，每次间隔5秒，重试3次都报错，要记录日志。
+
+## 4.3 支持ack方法
+
+需要把函数入参和可执行ack的对象，丢到线程池，在协程池里面去做ack
+
 
 
 # 5. 要求使用 zap并切割来记录日志

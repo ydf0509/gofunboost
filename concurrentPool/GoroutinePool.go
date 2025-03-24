@@ -1,9 +1,7 @@
-package main
+package concurrentpool
 
 import (
-
 	"sync"
-	
 )
 
 // GoroutinePool 结构体
@@ -45,4 +43,3 @@ func (p *GoroutinePool) Wait() {
 	p.wg.Wait()   // 等待所有工作完成
 	close(p.jobs) // 关闭工作队列
 }
-

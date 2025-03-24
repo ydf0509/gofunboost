@@ -9,6 +9,8 @@ import (
 	"github.com/gofunboost/concurrentpool"
 	"github.com/gofunboost/core"
 	"go.uber.org/zap"
+
+	// "go.uber.org/zap"
 	"golang.org/x/time/rate"
 	// "go.uber.org/zap"
 )
@@ -20,17 +22,16 @@ var (
 	ErrRedisConnection       = errors.New("redis connection error")
 )
 
-
 // BaseBroker 定义基础Broker接口
 type Broker interface {
 	// Consume 启动消费函数
-	Consume() 
+	Consume()
 	// ConsumeUsingOneConn 使用一个连接消费消息
 	// ConsumeUsingOneConn(ctx context.Context) error
-
+	ConsumeUsingOneConn()
 	impConsumeUsingOneConn() error
 	// Push 推送消息到队列
-	Push(args ...interface{})  (*core.Message, error)
+	Push(args ...interface{}) (*core.Message, error)
 	Publish(msg *core.Message) (*core.Message, error)
 
 	impSendMsg(msg string) error
@@ -46,11 +47,10 @@ type Broker interface {
 // Broker 定义Broker结构体
 type BaseBroker struct {
 	core.BoostOptions
-	Pool         *concurrentpool.GoEasyPool
-	StartTimeTs  int64
-	limiter      *rate.Limiter
-	imp          Broker
-
+	Pool        *concurrentpool.GoEasyPool
+	StartTimeTs int64
+	limiter     *rate.Limiter
+	imp         Broker
 }
 
 // NewBroker 创建一个新的Broker
@@ -60,71 +60,78 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 	}
 
 	if boostoptions.ConsumeFunc == nil {
-		panic (ErrInvalidConsumeFunc)
+		panic(ErrInvalidConsumeFunc)
 	}
 
-	b:= &BaseBroker{
+	base := &BaseBroker{
 		BoostOptions: boostoptions,
 		Pool:         concurrentpool.NewGoEasyPool(boostoptions.ConcurrentNum),
 		StartTimeTs:  time.Now().Unix(),
 	}
-	
-	if b.QPSLimit > 0 {
-		b.limiter = rate.NewLimiter(rate.Limit(b.QPSLimit), b.QPSLimit)
+
+	if base.QPSLimit > 0 {
+		base.limiter = rate.NewLimiter(rate.Limit(base.QPSLimit), 1)
 	}
 
-	b.imp.newBrokerCustomInit()
-	b.imp =b
-	return b
+	var broker Broker
+	switch boostoptions.BrokerKind {
+	case core.REDIS:
+		redisBroker := &RedisBroker{BaseBroker: base}
+		base.imp = redisBroker
+		broker = redisBroker
+	default:
+		base.imp = base
+		broker = base
+	}
+
+	broker.newBrokerCustomInit()
+	return broker
 }
 
-func (b *BaseBroker) newBrokerCustomInit()  {
-	
+func (b *BaseBroker) newBrokerCustomInit() {
+
 }
 
-
-func (b *BaseBroker) Consume()  {
-	imp := b.imp
-	for i := 0; i < imp.ConnNum; i++ {
+func (b *BaseBroker) Consume() {
+	for i := 0; i < b.ConnNum; i++ {
 		go func() {
-			imp.Logger.Info("Starting consumer connection", )
-			imp.ConsumeUsingOneConn()
+			b.Logger.Info("Starting consumer connection")
+			b.imp.ConsumeUsingOneConn()
 		}()
 	}
 }
 
-
-func (b *BaseBroker) ConsumeUsingOneConn()  {
-	imp := b.imp
+func (b *BaseBroker) ConsumeUsingOneConn() {
 	for {
-		err:=imp.impConsumeUsingOneConn()
+		err := b.imp.impConsumeUsingOneConn()
 		if err != nil {
-			imp.Logger.Error("Consumer connection error", zap.Error(err))
+			b.Logger.Error("Consumer connection error", zap.Error(err))
 			time.Sleep(60 * time.Second)
 		}
-		
+
 	}
 }
 
 func (b *BaseBroker) impConsumeUsingOneConn() error {
 	// _imp := b.imp
-	err :=errors.New("has no implementation")
+	err := errors.New("has no implementation")
 	return err
 }
 
 func (b *BaseBroker) Push(args ...interface{}) (*core.Message, error) {
-	imp:=b.imp
 	msg := &core.Message{
-		FucnArgs: args,
-		PublishTs: time.Now().Unix(),
+		FucnArgs:       args,
+		PublishTs:      time.Now().Unix(),
 		PublishTimeStr: time.Now().Format("2006-01-02 15:04:05"),
-		TaskId: fmt.Sprintf("%d", time.Now().UnixNano()),
+		TaskId:         fmt.Sprintf("%d", time.Now().UnixNano()),
 	}
-	return imp.Publish(msg)
+	// fmt.Printf("%v  %v  %v", b.QueueName, b, b.imp)
+	// b.Logger.Infof("%v  %v", b, b.imp)
+
+	return b.imp.Publish(msg)
 }
 
 func (b *BaseBroker) Publish(msg *core.Message) (*core.Message, error) {
-	imp:=b.imp
 	taskId := msg.TaskId
 	if taskId == "" {
 		taskId = fmt.Sprintf("%d", time.Now().UnixNano())
@@ -134,11 +141,14 @@ func (b *BaseBroker) Publish(msg *core.Message) (*core.Message, error) {
 	msg.PublishTimeStr = time.Now().Format("2006-01-02 15:04:05")
 
 	msgStr := msg.ToJson()
-	err := imp.impSendMsg(msgStr)
-	return msg,err
+	err := b.imp.impSendMsg(msgStr)
+	return msg, err
 }
 
 func (b *BaseBroker) impSendMsg(msg string) error {
-	imp:= b.imp
-	return errors.New(fmt.Sprintf("has no implementation %s", imp))
+	return errors.New(fmt.Sprintf("impSendMsg has no implementation %s", b.imp))
+}
+
+func (b *BaseBroker) impAckMsg(msg *core.MessageWrapper) error {
+	return errors.New(fmt.Sprintf(" impAckMsg has no implementation %s", b.imp))
 }

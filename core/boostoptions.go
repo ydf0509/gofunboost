@@ -9,7 +9,7 @@ type BoostOptions struct {
 	BrokerKind    BrokerType
 	ConnNum       int
 	ConcurrentNum int
-	QPSLimit      int
+	QPSLimit      float64
 	MaxRetries    int
 	BrokerConfig  Config
 	Logger        *zap.SugaredLogger

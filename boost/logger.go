@@ -4,15 +4,16 @@ import (
 	"os"
 	"path/filepath"
 
+	// "sync"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // initLogger 初始化日志系统
-func initLogger() (*zap.Logger, error) {
+func initLogger() (*zap.SugaredLogger, error) {
 	// 创建日志目录
-	logDir := "logs"
+	logDir := filepath.Join("/", "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func initLogger() (*zap.Logger, error) {
 	}
 
 	// 设置编码器配置
-	encoderConfig := zapcore.EncoderConfig{
+	fileEncoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
 		NameKey:        "logger",
@@ -45,28 +46,47 @@ func initLogger() (*zap.Logger, error) {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
-	// 创建核心
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderConfig),
+	consoleEncoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05"),
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+
+	// 创建文件输出核心
+	fileCore := zapcore.NewCore(
+		zapcore.NewJSONEncoder(fileEncoderConfig),
 		zapcore.AddSync(lumberJackLogger),
 		zapcore.InfoLevel,
 	)
 
+	// 创建控制台输出核心
+	consoleCore := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(consoleEncoderConfig),
+		zapcore.AddSync(os.Stdout),
+		zapcore.InfoLevel,
+	)
+
+	// 使用NewTee将两个Core合并
+	core := zapcore.NewTee(fileCore, consoleCore)
+
 	// 创建日志记录器
 	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	sugar := logger.Sugar()
 
-	// 替换全局日志记录器
-	zap.ReplaceGlobals(logger)
-
-	return logger, nil
+	return sugar, nil
 }
 
-// GetLogger 获取日志记录器
-func GetLogger() *zap.Logger {
-	return zap.L()
-}
+var Sugar *zap.SugaredLogger
 
-// SyncLogger 同步日志记录器
-func SyncLogger() {
-	zap.L().Sync()
+func init() {
+	Sugar, _ = initLogger()
 }

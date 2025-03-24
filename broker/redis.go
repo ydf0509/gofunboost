@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 
 	// "errors"
 	"fmt"
@@ -18,6 +19,10 @@ import (
 type RedisBroker struct {
 	*BaseBroker
 	RedisConn *redis.Client
+}
+
+func NewRedisBroker(boostoptions core.BoostOptions) *RedisBroker {
+	return NewBroker(boostoptions).(*RedisBroker)
 }
 
 // createRedisClient 创建Redis客户端
@@ -57,18 +62,13 @@ func (b *RedisBroker) impConsumeUsingOneConn() error {
 
 	b.Logger.Info("Redis connection established", zap.String("addr", client.Options().Addr))
 
+	ctx := context.Background()
 	// 持续消费消息
 	for {
-		// 使用blpop 获取消息，添加到协程池
-		ctx := context.Background()
-
-		// 如果设置了QPS限制，则等待令牌
-		if b.limiter != nil {
-			b.limiter.Wait(ctx)
-		}
+		
 
 		// 从队列中获取消息
-		result, err := client.BLPop(ctx, 60, b.QueueName).Result()
+		result, err := client.BLPop(ctx, time.Second*60, b.QueueName).Result()
 		if err != nil {
 			if err == redis.Nil {
 				// 队列为空，等待一段时间后重试
@@ -89,11 +89,59 @@ func (b *RedisBroker) impConsumeUsingOneConn() error {
 			continue
 		}
 
+		// 如果设置了QPS限制，则等待令牌
+		if b.limiter != nil {
+			b.limiter.Wait(ctx)
+		}
+
+	
+
 		// 使用协程池处理消息
 		b.Pool.Submit(func() {
-			if err := b.ConsumeFunc(&msg); err != nil {
-				b.Logger.Errorf("Failed to process message: %v", err)
+			// 记录消息处理开始
+			b.Logger.Infof("Processing message with TaskId: %s", msg.TaskId)
+
+			// 使用反射调用消费函数
+			funcValue := reflect.ValueOf(b.ConsumeFunc)
+			// 获取函数类型
+			funcType := funcValue.Type()
+
+			// 准备函数参数
+			args := make([]reflect.Value, len(msg.FucnArgs))
+			for i, arg := range msg.FucnArgs {
+				// 获取期望的参数类型
+				expectedType := funcType.In(i)
+				argValue := reflect.ValueOf(arg)
+
+				// 如果需要类型转换
+				if argValue.Type() != expectedType {
+					// 处理数值类型转换
+					if argValue.Kind() == reflect.Float64 && expectedType.Kind() == reflect.Int {
+						args[i] = reflect.ValueOf(int(argValue.Float()))
+					} else {
+						// 其他类型转换场景可以在这里添加
+						args[i] = argValue
+					}
+				} else {
+					args[i] = argValue
+				}
 			}
+
+			// 调用函数
+			results := funcValue.Call(args)
+
+			// 检查是否有错误返回
+			if len(results) > 0 {
+				lastResult := results[len(results)-1]
+				if lastResult.Type().Implements(reflect.TypeOf((*error)(nil)).Elem()) && !lastResult.IsNil() {
+					err := results[len(results)-1].Interface().(error)
+					b.Logger.Errorf("Failed to process message (TaskId: %s): %v, Args: %+v",
+						msg.TaskId, err, msg.FucnArgs)
+					return
+				}
+			}
+
+			b.Logger.Infof("Successfully processed message with TaskId: %s", msg.TaskId)
 		})
 	}
 }

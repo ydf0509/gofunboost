@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	// "errors"
+
+	// "errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -17,13 +19,6 @@ import (
 	"golang.org/x/time/rate"
 	// "go.uber.org/zap"
 )
-
-// // 定义错误
-// var (
-// 	ErrUnsupportedBrokerType = errors.New("unsupported broker type")
-// 	ErrInvalidConsumeFunc    = errors.New("invalid consume function")
-// 	ErrRedisConnection       = errors.New("redis connection error")
-// )
 
 // BaseBroker 定义基础Broker接口
 type Broker interface {
@@ -61,8 +56,8 @@ type BaseBroker struct {
 	FuncType    reflect.Type
 	ParamType   reflect.Type
 	// ParamValue  reflect.Value
-	Sugar  *zap.SugaredLogger
-	imp Broker
+	Sugar *zap.SugaredLogger
+	imp   Broker
 }
 
 // NewBroker 创建一个新的Broker
@@ -72,7 +67,7 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 	}
 
 	if boostoptions.ConsumeFunc == nil {
-		panic(core.FunboostRunError{FunboostError: core.FunboostError{Message: "consume func is required"}})
+		panic(core.NewFunboostRunError("consume func is required", 0, nil, nil))
 	}
 
 	base := &BaseBroker{
@@ -127,24 +122,23 @@ func (b *BaseBroker) ConsumeUsingOneConn() {
 	for {
 		err := b.imp.impConsumeUsingOneConn()
 		if err != nil {
-			b.Sugar.Error("Consumer connection error", zap.Error(err))
-			time.Sleep(60 * time.Second)
+			if errx, ok := interface{}(err).(core.BrokerNetworkError); ok {
+				b.Sugar.Error("Consumer connection error", zap.Error(errx))
+				time.Sleep(60 * time.Second)
+			}
+			b.Sugar.Error("not conn error", zap.Error(err))
 		}
-
+		b.Sugar.Error("impConsumeUsingOneConn has exit ")
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func (b *BaseBroker) impConsumeUsingOneConn() error {
 	// _imp := b.imp
-	err :=&core.FunboostRunError{FunboostError: core.FunboostError{
-		Message: "impConsumeUsingOneConn has no implementation",
-		Logger:  b.Logger,
-	}}
+	err := core.NewFunboostRunError("impConsumeUsingOneConn has no implementation", 0, nil, b.Logger)
 	err.Log()
 	panic(err)
 }
-
-
 
 func (b *BaseBroker) Push(data interface{}) (*core.Message, error) {
 	msg := &core.Message{
@@ -174,38 +168,28 @@ func (b *BaseBroker) Publish(msg *core.Message) (*core.Message, error) {
 }
 
 func (b *BaseBroker) impSendMsg(msg string) error {
-	err :=&core.FunboostRunError{FunboostError: core.FunboostError{
-		Message: fmt.Sprintf("impSendMsg has no implementation %s", b.imp),
-		Logger:  b.Logger,
-	}}
+	err := core.NewBrokerNetworkError(fmt.Sprintf("impSendMsg has no implementation %s", b.imp), 0, nil, b.Logger)
 	err.Log()
 	panic(err)
 }
 
 func (b *BaseBroker) impAckMsg(msg *core.MessageWrapper) error {
-	err:=&core.FunboostRunError{FunboostError: core.FunboostError{
-		Message: fmt.Sprintf("impAckMsg has no implementation %s", b.imp),
-		Logger:  b.Logger,
-	}}
+	err := core.NewBrokerNetworkError(fmt.Sprintf("impAckMsg has no implementation %s", b.imp), 0, nil, b.Logger)
 	err.Log()
 	panic(err)
 }
 
-
 func (b *BaseBroker) Json2Message(msgStr string) *core.Message {
 	var msg core.Message
 	err := json.Unmarshal([]byte(msgStr), &msg)
-	if err!= nil {
+	if err != nil {
 		return nil
 	}
 
 	// 将msg.Data转换为JSON字符串
 	jsonData, err := json.Marshal(msg.Data)
 	if err != nil {
-		err2 :=&core.FunboostRunError{FunboostError: core.FunboostError{
-			Message: fmt.Sprintf("Failed to marshal message data: %v", err),
-			Logger:  b.Logger,	
-		}}
+		err2 := core.NewFunboostRunError(fmt.Sprintf("Failed to marshal message data: %v", err), 0, err, b.Logger)
 		err2.Log()
 		return nil
 	}
@@ -213,10 +197,7 @@ func (b *BaseBroker) Json2Message(msgStr string) *core.Message {
 	// 将JSON字符串反序列化为目标类型
 	paramValue := reflect.New(b.ParamType).Interface()
 	if err := json.Unmarshal(jsonData, paramValue); err != nil {
-		err2:=&core.FunboostRunError{FunboostError: core.FunboostError{
-			Message: fmt.Sprintf("Failed to unmarshal message data: %v", err),
-			Logger:  b.Logger,	
-		}}
+		err2 := core.NewFunboostRunError(fmt.Sprintf("Failed to unmarshal message data: %v", err), 0, err, b.Logger)
 		err2.Log()
 		return nil
 	}
@@ -241,21 +222,16 @@ func (b *BaseBroker) run(messageWrapper *core.MessageWrapper) {
 		lastResult := results[len(results)-1]
 		if lastResult.Type().Implements(reflect.TypeOf((*error)(nil)).Elem()) && !lastResult.IsNil() {
 			err := results[len(results)-1].Interface().(error)
-			err2 :=&core.FunboostRunError{FunboostError: core.FunboostError{
-				Message: fmt.Sprintf("Failed to process message (TaskId: %s): %v, Data: %+v",
-				msg.TaskId, err, msg.Data),
-				Logger:  b.Logger,
-			}}
-			err2.Log()
-			return
+			if err != nil {
+				err2 := core.NewFunboostRunError(fmt.Sprintf("Failed to process message (TaskId: %s): %v, Data: %+v", msg.TaskId, err, msg.Data), 0, err, b.Logger)
+				err2.Log()
+			}
+
 		}
 	}
 	if err := b.imp.impAckMsg(messageWrapper); err != nil {
-		err2 :=&core.FunboostRunError{FunboostError: core.FunboostError{
-			Message: fmt.Sprintf("Failed to ack message (TaskId: %s): %v, Data: %+v",
-			msg.TaskId, err, msg.Data),
-			Logger:  b.Logger,
-		}}
+		err2 := core.NewFunboostRunError(fmt.Sprintf("Failed to ack message (TaskId: %s): %v, Data: %+v",
+			msg.TaskId, err, msg.Data), 0, err, b.Logger)
 		err2.Log()
 	}
 

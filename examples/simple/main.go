@@ -70,7 +70,7 @@ func main() {
 	printValueOptions := core.MergeBoostOptions(core.BoostOptions{
 		QueueName:   "queue_test33",
 		ConsumeFunc: printValue,
-		QPSLimit:    0.2}, &baseOptions)
+		QPSLimit:    0.5}, &baseOptions)
 
 	printValueBooster := broker.NewBroker(printValueOptions)
 

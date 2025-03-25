@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	// "log"
 	"time"
@@ -12,74 +13,84 @@ import (
 	// "go.uber.org/zap"
 )
 
+// 定义加法函数的参数结构体
+type AddParams struct {
+	X int
+	Y int
+}
+
 // 定义一个加法函数
-func add(x, y int) int {
-	result := x + y
-	// log.Printf("计算 %d + %d = %d\n", x, y, result)
-	boost.Sugar.Infof("计算 %d + %d = %d\n", x, y, result)
+func add(params AddParams) (int, error) {
+	result := params.X + params.Y
+	boost.Sugar.Infof("计算 %d + %d = %d\n", params.X, params.Y, result)
 	time.Sleep(1 * time.Second)
-	return result
+	if params.X == 10 {
+		err := errors.New("test error")
+		return 0, err
+	}
+	return result, nil
+}
+
+// 定义打印函数的参数结构体
+type PrintParams struct {
+	Value interface{}
 }
 
 // 定义一个打印函数
-func printValue(a interface{}) {
-	boost.Sugar.Infof("打印值: %v\n", a)
+func printValue(params PrintParams) {
+	boost.Sugar.Infof("打印值: %v\n", params.Value)
+}
+
+var baseOptions = core.BoostOptions{
+	BrokerKind:    core.REDIS,
+	ConnNum:       5,
+	ConcurrentNum: 50,
+	QPSLimit:      2,
+	MaxRetries:    3,
+	BrokerConfig: core.Config{
+		BrokerUrl: "localhost:6379",
+		BrokerTransportOptions: map[string]interface{}{
+			"special1": 123,
+		},
+	},
+	Logger: boost.Logger,
 }
 
 func main() {
 	defer boost.Sugar.Sync()
 
-	// 创建加法函数的Broker
-	addOptions := core.BoostOptions{
-		QueueName:     "queue_test2",
-		ConsumeFunc:   add,
-		BrokerKind:    core.REDIS,
-		ConnNum:       5,
-		ConcurrentNum: 50,
-		QPSLimit:      2,
-		MaxRetries:    3,
-		BrokerConfig: core.Config{
-			BrokerUrl: "localhost:6379",
-			BrokerTransportOptions: map[string]interface{}{
-				"special1": 123,
-			},
-		},
-		Logger: boost.Sugar,
-	}
+	addOptions := core.MergeBoostOptions(core.BoostOptions{
+		QueueName:   "queue_test2",
+		ConsumeFunc: add,
+	}, &baseOptions)
 
 	addBooster := broker.NewBroker(addOptions)
 
 	// 创建打印函数的Broker
-	printValueOptions := core.BoostOptions{
-		QueueName:     "queue_test33",
-		ConsumeFunc:   printValue,
-		BrokerKind:    core.REDIS,
-		ConnNum:       5,
-		ConcurrentNum: 20,
-		QPSLimit:      0,
-		MaxRetries:    3,
-		BrokerConfig: core.Config{
-			BrokerUrl: "localhost:6379",
-			BrokerTransportOptions: map[string]interface{}{
-				"special1": 123,
-				"special2": "aaaa",
-			},
-		},
-		Logger: boost.Sugar,
-	}
+	printValueOptions := core.MergeBoostOptions(core.BoostOptions{
+		QueueName:   "queue_test33",
+		ConsumeFunc: printValue,
+		QPSLimit:    0.2}, &baseOptions)
 
 	printValueBooster := broker.NewBroker(printValueOptions)
 
 	// 启动消费
-	// addBooster.Consume()
+	addBooster.Consume()
 
 	printValueBooster.Consume()
 
 	// 推送消息
 	for i := 0; i < 100; i++ {
-		addBooster.Push(i, i*2)
+		addParams := AddParams{
+			X: i,
+			Y: i * 2,
+		}
+		addBooster.Push(addParams)
 
-		printValueBooster.Push(fmt.Sprintf("hello world %d", i))
+		printParams := PrintParams{
+			Value: fmt.Sprintf("hello world %d", i),
+		}
+		printValueBooster.Push(printParams)
 
 		time.Sleep(100 * time.Millisecond)
 	}

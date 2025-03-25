@@ -11,11 +11,11 @@ import (
 )
 
 // initLogger 初始化日志系统
-func initLogger() (*zap.SugaredLogger, error) {
+func initLogger() (*zap.Logger,*zap.SugaredLogger, error) {
 	// 创建日志目录
 	logDir := filepath.Join("/", "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return nil, err
+		return nil,nil, err
 	}
 
 	// 设置日志输出文件
@@ -79,14 +79,16 @@ func initLogger() (*zap.SugaredLogger, error) {
 	core := zapcore.NewTee(fileCore, consoleCore)
 
 	// 创建日志记录器
-	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(0))
 	sugar := logger.Sugar()
 
-	return sugar, nil
+	return logger,sugar, nil
 }
 
+var Logger *zap.Logger
 var Sugar *zap.SugaredLogger
 
+
 func init() {
-	Sugar, _ = initLogger()
+	Logger,Sugar, _ = initLogger()
 }

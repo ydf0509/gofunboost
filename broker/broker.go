@@ -77,7 +77,7 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 	switch boostoptions.BrokerKind {
 	case core.REDIS:
 		redisBroker := &RedisBroker{BaseBroker: base}
-		base.imp = redisBroker
+		redisBroker.imp = redisBroker
 		broker = redisBroker
 	default:
 		base.imp = base
@@ -89,7 +89,7 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 }
 
 func (b *BaseBroker) newBrokerCustomInit() {
-
+	b.Logger.Infof("newBrokerCustomInit %v", b)
 }
 
 func (b *BaseBroker) Consume() {

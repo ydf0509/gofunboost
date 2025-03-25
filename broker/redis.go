@@ -47,7 +47,7 @@ func (b *RedisBroker) createRedisClient() (*redis.Client, error) {
 }
 
 func (b *RedisBroker) newBrokerCustomInit() {
-
+	b.Logger.Infof("newBrokerCustomInit %v", b)
 }
 
 // ConsumeUsingOneConn 使用一个连接消费消息
@@ -99,7 +99,7 @@ func (b *RedisBroker) impConsumeUsingOneConn() error {
 		// 使用协程池处理消息
 		b.Pool.Submit(func() {
 			// 记录消息处理开始
-			b.Logger.Infof("Processing message with TaskId: %s", msg.TaskId)
+			// b.Logger.Infof("Processing message with TaskId: %s", msg.TaskId)
 
 			// 使用反射调用消费函数
 			funcValue := reflect.ValueOf(b.ConsumeFunc)

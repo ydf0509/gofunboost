@@ -56,7 +56,7 @@ func main() {
 		BrokerKind:    core.REDIS,
 		ConnNum:       5,
 		ConcurrentNum: 20,
-		QPSLimit:      3,
+		QPSLimit:      0,
 		MaxRetries:    3,
 		BrokerConfig: core.Config{
 			BrokerUrl: "localhost:6379",
@@ -81,7 +81,7 @@ func main() {
 
 		printValueBooster.Push(fmt.Sprintf("hello world %d", i))
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	// 阻塞进程，让所有协程池一直运行

@@ -25,13 +25,8 @@ type Config struct {
 	BrokerTransportOptions map[string]interface{} `json:"broker_transport_options"`
 }
 
-func MergeBoostOptions(reWriteOptions BoostOptions, baseOption *BoostOptions) BoostOptions {
-	newOptions := BoostOptions{}
-	if baseOption == nil {
-		return reWriteOptions
-	}
-	newOptions = *baseOption
-
+func MergeBoostOptions(reWriteOptions BoostOptions, baseOption BoostOptions) BoostOptions {
+	newOptions := baseOption
 	// reWriteOptions 中非0值合并到 newOptions
 	v := reflect.ValueOf(reWriteOptions)
 	for i := 0; i < v.NumField(); i++ {

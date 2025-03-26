@@ -10,5 +10,6 @@ const (
 	RABBITMQ BrokerType = "rabbitmq"
 	// MEMORY 使用内存作为消息队列
 	MEMORY BrokerType = "memory"
+	// KAFKA 使用Kafka作为消息队列
+	KAFKA BrokerType = "kafka"
 )
-

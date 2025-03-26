@@ -1,4 +1,4 @@
-package boost
+package core
 
 import (
 	"os"

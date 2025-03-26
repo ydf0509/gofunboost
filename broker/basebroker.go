@@ -1,23 +1,16 @@
 package broker
 
 import (
-	// "context"
 	"context"
 	"encoding/json"
-	// "errors"
-
-	// "errors"
 	"fmt"
 	"reflect"
 	"time"
-
 	"github.com/gofunboost/concurrentpool"
 	"github.com/gofunboost/core"
 	"go.uber.org/zap"
-
-	// "go.uber.org/zap"
 	"golang.org/x/time/rate"
-	// "go.uber.org/zap"
+
 )
 
 // BaseBroker 定义基础Broker接口
@@ -60,50 +53,7 @@ type BaseBroker struct {
 	imp   Broker
 }
 
-// NewBroker 创建一个新的Broker
-func NewBroker(boostoptions core.BoostOptions) Broker {
-	if boostoptions.QueueName == "" {
-		panic("queue name is required")
-	}
 
-	if boostoptions.ConsumeFunc == nil {
-		panic(core.NewFunboostRunError("consume func is required", 0, nil, nil))
-	}
-
-	base := &BaseBroker{
-		BoostOptions: boostoptions,
-		Pool:         concurrentpool.NewGoEasyPool(boostoptions.ConcurrentNum),
-		StartTimeTs:  time.Now().Unix(),
-	}
-
-	if base.QPSLimit > 0 {
-		base.limiter = rate.NewLimiter(rate.Limit(base.QPSLimit), 1)
-	}
-
-	base.Sugar = boostoptions.Logger.Sugar()
-
-	// 使用反射调用消费函数
-	base.FuncValue = reflect.ValueOf(boostoptions.ConsumeFunc)
-	base.FuncType = reflect.TypeOf(boostoptions.ConsumeFunc)
-
-	// 创建一个新的目标类型实例
-	base.ParamType = base.FuncType.In(0)
-	// base.ParamValue = reflect.New(paramType).Interface()
-
-	var broker Broker
-	switch boostoptions.BrokerKind {
-	case core.REDIS:
-		redisBroker := &RedisBroker{BaseBroker: base}
-		redisBroker.imp = redisBroker
-		broker = redisBroker
-	default:
-		base.imp = base
-		broker = base
-	}
-
-	broker.newBrokerCustomInit()
-	return broker
-}
 
 func (b *BaseBroker) newBrokerCustomInit() {
 	b.Sugar.Infof("newBrokerCustomInit %v", b)
@@ -235,5 +185,5 @@ func (b *BaseBroker) run(messageWrapper *core.MessageWrapper) {
 		err2.Log()
 	}
 
-	b.Sugar.Infof("Successfully processed message with TaskId: %s", msg.TaskId)
+	b.Sugar.Infow("Successfully processed message ", "taskId", msg.TaskId, "data", msg.Data, "brokerKind", b.BrokerKind)
 }

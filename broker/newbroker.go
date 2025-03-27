@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
@@ -37,6 +38,15 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 
 	// 创建一个新的目标类型实例
 	base.ParamType = base.FuncType.In(0)
+	// 检查结构体字段是否都是可导出的（大写开头）
+	if base.ParamType.Kind() == reflect.Struct {
+		for i := 0; i < base.ParamType.NumField(); i++ {
+			field := base.ParamType.Field(i)
+			if field.PkgPath != "" {
+				panic(core.NewFunboostRunError(fmt.Sprintf("struct field '%s' must be exported (start with uppercase) for JSON serialization", field.Name), 0, nil, nil))
+			}
+		}
+	}
 	// base.ParamValue = reflect.New(paramType).Interface()
 
 	var broker Broker

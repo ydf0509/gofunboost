@@ -168,7 +168,7 @@ func (b *BaseBroker) execute(messageWrapper *core.MessageWrapper) {
 	isFunRunError := false
 	for rt := 0; rt < b.MaxRetries; rt++ {
 		results := b.FuncValue.Call([]reflect.Value{reflect.ValueOf(msg.Data).Elem()})
-
+	
 		// 检查是否有错误返回
 		if len(results) > 0 {
 			lastResult := results[len(results)-1]
@@ -180,9 +180,11 @@ func (b *BaseBroker) execute(messageWrapper *core.MessageWrapper) {
 					isFunRunError = true
 				} else {
 					isFunRunError = false
-					break
 				}
 			}
+		}
+		if isFunRunError == false {
+			break
 		}
 
 	}

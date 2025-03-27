@@ -120,24 +120,26 @@ func main() {
 
 	// 推送消息
 	for i := 0; i < 100; i++ {
-		addParams := AddParams{
-			X: i,
-			Y: i * 2,
-		}
-		addBooster.Push(addParams)
+		// addParams := AddParams{
+		// 	X: i,
+		// 	Y: i * 2,
+		// }
+		// addBooster.Push(addParams)
 
 		printParams := PrintParams{
 			Value: fmt.Sprintf("hello world %d", i),
 		}
 		printValueBooster.Push(printParams)
 
-		time.Sleep(100 * time.Millisecond)
+		// time.Sleep(100 * time.Millisecond)
 	}
 
-	// 阻塞进程，让所有协程池一直运行
-	for {
-		time.Sleep(10 * time.Second)
-	}
+	// // 阻塞进程，让所有协程池一直运行
+	// for {
+	// 	time.Sleep(10 * time.Second)
+	// }
+
+	select {}
 
 	fmt.Println("aaaa")
 }

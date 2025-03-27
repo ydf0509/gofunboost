@@ -71,7 +71,9 @@ func (b *BaseBroker) ConsumeUsingOneConn() {
 	for {
 		err := b.imp.impConsumeUsingOneConn()
 		if err != nil {
-			if errx, ok := interface{}(err).(core.BrokerNetworkError); ok {
+			// errType := err.(type)
+			// if errx, ok := interface{}(err).(core.BrokerNetworkError); ok
+			if errx, ok := err.(*core.BrokerNetworkError); ok {
 				b.Sugar.Error("Consumer connection error", zap.Error(errx))
 				time.Sleep(60 * time.Second)
 			}

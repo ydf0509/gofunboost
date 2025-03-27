@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	// "log"
+	"log"
 	"time"
 
 	"github.com/ydf0509/gofunboost/broker"
@@ -21,7 +21,7 @@ type AddParams struct {
 // 定义一个加法函数
 func add(params AddParams) (int, error) {
 	result := params.X + params.Y
-	core.Sugar.Infof("计算 %d + %d = %d\n", params.X, params.Y, result)
+	log.Printf("计算 %d + %d = %d\n", params.X, params.Y, result)
 	time.Sleep(1 * time.Second)
 	if params.X == 10 {
 		err := errors.New("test error")
@@ -40,7 +40,7 @@ type PrintParams struct {
 
 // 定义一个打印函数
 func printValue(params PrintParams) {
-	core.Sugar.Infof("打印值: %v\n", params.Value)
+	log.Printf("打印值: %v\n", params.Value)
 }
 
 var baseOptions = core.BoostOptions{
@@ -102,7 +102,7 @@ var baseOptions = core.BoostOptions{
 // }
 
 func main() {
-	defer core.Sugar.Sync()
+	// defer core.Sugar.Sync()
 	defer core.Logger.Sync()
 
 	addBooster := broker.NewBroker(core.MergeBoostOptions(core.BoostOptions{
@@ -115,6 +115,10 @@ func main() {
 		QueueName:   "queue_test33",
 		ConsumeFunc: printValue,
 		QPSLimit:    0.5}, baseOptions))
+
+	// 启动消费
+	addBooster.Consume()
+	printValueBooster.Consume()
 
 	// 推送消息
 	for i := 0; i < 100; i++ {
@@ -129,11 +133,6 @@ func main() {
 
 		// time.Sleep(100 * time.Millisecond)
 	}
-
-	// 启动消费
-	addBooster.Consume()
-
-	printValueBooster.Consume()
 
 	select {}
 

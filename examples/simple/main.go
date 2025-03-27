@@ -27,6 +27,9 @@ func add(params AddParams) (int, error) {
 		err := errors.New("test error")
 		return 0, err
 	}
+	if params.X%10000 == 0 {
+		fmt.Println("x:", params.X)
+	}
 	return result, nil
 }
 
@@ -98,48 +101,36 @@ func main() {
 	defer core.Sugar.Sync()
 	defer core.Logger.Sync()
 
-	addOptions := core.MergeBoostOptions(core.BoostOptions{
+	addBooster := broker.NewBroker(core.MergeBoostOptions(core.BoostOptions{
 		QueueName:   "queue_test2",
 		ConsumeFunc: add,
-	}, baseOptions)
+		QPSLimit:    -1,
+	}, baseOptions))
 
-	addBooster := broker.NewBroker(addOptions)
-
-	// 创建打印函数的Broker
-	printValueOptions := core.MergeBoostOptions(core.BoostOptions{
+	printValueBooster := broker.NewBroker(core.MergeBoostOptions(core.BoostOptions{
 		QueueName:   "queue_test33",
 		ConsumeFunc: printValue,
-		QPSLimit:    0.5}, baseOptions)
+		QPSLimit:    0.5}, baseOptions))
 
-	printValueBooster := broker.NewBroker(printValueOptions)
+	// 推送消息
+	for i := 0; i < 100; i++ {
+		addBooster.Push(AddParams{
+			X: i,
+			Y: i * 2,
+		})
+
+		printValueBooster.Push(PrintParams{
+			Value: fmt.Sprintf("hello world %d", i),
+		})
+
+		// time.Sleep(100 * time.Millisecond)
+	}
 
 	// 启动消费
 	addBooster.Consume()
 
 	printValueBooster.Consume()
 
-	// 推送消息
-	for i := 0; i < 100; i++ {
-		// addParams := AddParams{
-		// 	X: i,
-		// 	Y: i * 2,
-		// }
-		// addBooster.Push(addParams)
-
-		printParams := PrintParams{
-			Value: fmt.Sprintf("hello world %d", i),
-		}
-		printValueBooster.Push(printParams)
-
-		// time.Sleep(100 * time.Millisecond)
-	}
-
-	// // 阻塞进程，让所有协程池一直运行
-	// for {
-	// 	time.Sleep(10 * time.Second)
-	// }
-
 	select {}
 
-	fmt.Println("aaaa")
 }

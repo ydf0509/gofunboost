@@ -16,7 +16,8 @@ type MemoryBroker struct {
 func (b *MemoryBroker) newBrokerCustomInit() {
 	b.Sugar.Infof("newMemoryBrokerCustomInit %v", b)
 	// 创建带缓冲的消息通道
-	b.msgChan = make(chan *core.Message, 10000)
+	b.msgChan = make(chan *core.Message, int64(10000000))
+
 }
 
 // ConsumeUsingOneConn 使用一个连接消费消息

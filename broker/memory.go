@@ -16,7 +16,7 @@ type MemoryBroker struct {
 func (b *MemoryBroker) newBrokerCustomInit() {
 	b.Sugar.Infof("newMemoryBrokerCustomInit %v", b)
 	// 创建带缓冲的消息通道
-	b.msgChan = make(chan *core.Message, int64(10000000))
+	b.msgChan = make(chan *core.Message, b.BrokerConfig.BrokerTransportOptions["memoryChanSize"].(int))
 
 }
 

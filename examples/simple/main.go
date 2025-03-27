@@ -50,6 +50,10 @@ var baseOptions = core.BoostOptions{
 	QPSLimit:      2,
 	MaxRetries:    3,
 	Logger:        core.Logger,
+	BrokerConfig: core.Config{
+		BrokerTransportOptions: map[string]interface{}{
+			"memoryChanSize": 10000},
+	},
 }
 
 // var baseOptions = core.BoostOptions{

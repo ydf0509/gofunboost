@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofunboost/core"
 	"github.com/streadway/amqp"
+	"github.com/ydf0509/gofunboost/core"
 	"go.uber.org/zap"
 )
 
@@ -127,7 +127,7 @@ func (b *RabbitMQBroker) impConsumeUsingOneConn() error {
 
 			// 使用协程池处理消息
 			b.Pool.Submit(func() {
-				b.run(&core.MessageWrapper{
+				b.execute(&core.MessageWrapper{
 					Msg: msg,
 					ContextExtra: map[string]interface{}{
 						"delivery": &d,

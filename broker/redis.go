@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/gofunboost/core"
+	"github.com/ydf0509/gofunboost/core"
 	"go.uber.org/zap"
 	// "golang.org/x/time/rate"
 )
@@ -84,7 +84,7 @@ func (b *RedisBroker) impConsumeUsingOneConn() error {
 		// 获取消费函数的参数类型
 
 		// 使用协程池处理消息
-		b.Pool.Submit(func() { b.run(&core.MessageWrapper{Msg: msg}) })
+		b.Pool.Submit(func() { b.execute(&core.MessageWrapper{Msg: msg}) })
 	}
 }
 

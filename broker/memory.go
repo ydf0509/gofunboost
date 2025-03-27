@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gofunboost/core"
+	"github.com/ydf0509/gofunboost/core"
 )
 
 // MemoryBroker 实现基于内存的消息队列
@@ -31,7 +31,7 @@ func (b *MemoryBroker) impConsumeUsingOneConn() error {
 			return ctx.Err()
 		case msg := <-b.msgChan:
 			// 使用协程池处理消息
-			b.Pool.Submit(func() { b.run(&core.MessageWrapper{Msg: msg}) })
+			b.Pool.Submit(func() { b.execute(&core.MessageWrapper{Msg: msg}) })
 		}
 	}
 }

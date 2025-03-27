@@ -1,32 +1,33 @@
-package concurrentpool
+package easypool
 
 import (
 	// "fmt"
 	"log"
 	"sync"
+	"github.com/ydf0509/gofunboost/concurrentpool"
 	// "os"
 	// "os/signal"
 	// "syscall"
 	// "time"
 )
 
-// GoEasyPool 结构体
-type GoEasyPool struct {
+// GoPool 结构体
+type GoPool struct {
 	maxWorkers int
 	jobs       chan func() // 存储不同的工作函数
 	once  sync.Once
 }
 
-// NewGoEasyPool 创建一个新的协程池
-func NewGoEasyPool(maxWorkers int) *GoEasyPool {
-	return &GoEasyPool{
+// NewGoPool 创建一个新的协程池
+func NewGoPool(maxWorkers int) concurrentpool.PoolSubmit {
+	return &GoPool{
 		maxWorkers: maxWorkers,
 		jobs:       make(chan func(), maxWorkers*2), // 工作队列，增大缓冲区
 	}
 }
 
 // Run 启动协程池并处理工作
-func (p *GoEasyPool) Run() {
+func (p *GoPool) Run() {
 	// 启动固定数量的工作协程
 	for i := 0; i < p.maxWorkers; i++ {
 		go func(workerId int) {
@@ -39,7 +40,7 @@ func (p *GoEasyPool) Run() {
 }
 
 // Submit 提交一个工作到协程池
-func (p *GoEasyPool) Submit(job func()) {
+func (p *GoPool) Submit(job func()) {
 	p.once.Do(func(){p.Run()})
 	p.jobs <- job
 }
@@ -58,7 +59,7 @@ func (p *GoEasyPool) Submit(job func()) {
 
 // func main() {
 // 	// 创建协程池，最大并发协程数为 3
-// 	pool := NewGoEasyPool(3)
+// 	pool := NewGoPool(3)
 
 // 	// 启动协程池
 // 	// pool.Run()

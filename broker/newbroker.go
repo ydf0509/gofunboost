@@ -3,8 +3,9 @@ package broker
 import (
 	"reflect"
 	"time"
-	"github.com/gofunboost/concurrentpool"
-	"github.com/gofunboost/core"
+
+	gopool "github.com/ydf0509/gofunboost/concurrentpool/simplepool"
+	"github.com/ydf0509/gofunboost/core"
 	"golang.org/x/time/rate"
 )
 
@@ -20,8 +21,8 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 
 	base := &BaseBroker{
 		BoostOptions: boostoptions,
-		Pool:         concurrentpool.NewGoEasyPool(boostoptions.ConcurrentNum),
-		StartTimeTs:  time.Now().Unix(), 
+		Pool:         gopool.NewGoPool(boostoptions.ConcurrentNum),
+		StartTimeTs:  time.Now().Unix(),
 	}
 
 	if base.QPSLimit > 0 {

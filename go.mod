@@ -1,4 +1,4 @@
-module github.com/gofunboost
+module github.com/ydf0509/gofunboost
 
 go 1.16
 

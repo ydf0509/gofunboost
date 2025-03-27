@@ -74,20 +74,3 @@ func NewFunboostRunError(message string, code int, cause error,logger *zap.Logge
 	}
 }
 
-// func main() {
-// 	logger, _ := zap.NewDevelopment()
-// 	sugar := logger.Sugar()
-
-// 	err := &FunboostBrokerNetworkError{
-// 		FunboostError: FunboostError{
-// 			Message: "网络错误",
-// 			Code:    10000,
-// 			Logger:  sugar,
-// 		},
-// 	}
-
-// 	if e, ok := interface{}(*err).(FunboostBrokerNetworkError); ok {
-// 		sugar.Infof("网络错误: %s", e.Error())
-// 	}
-
-// }

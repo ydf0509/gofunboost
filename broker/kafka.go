@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/gofunboost/core"
+	"github.com/ydf0509/gofunboost/core"
 	"go.uber.org/zap"
 )
 
@@ -132,7 +132,7 @@ func (h *kafkaConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 
 		// 使用协程池处理消息
 		h.broker.Pool.Submit(func() {
-			h.broker.run(&core.MessageWrapper{
+			h.broker.execute(&core.MessageWrapper{
 				Msg: msg,
 				ContextExtra: map[string]interface{}{
 					"session": session,

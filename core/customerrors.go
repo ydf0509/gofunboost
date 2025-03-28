@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"runtime"
 
 	"go.uber.org/zap"
 )
@@ -13,26 +14,35 @@ type ErrorLog interface {
 	GetErrName() string
 }
 
-type FunboostBaseError struct {
+type BaseError struct {
 	Message string
 	Code    int
 	Cause   error
 	Logger  *zap.Logger
+	GetFileLine   func() string // 延迟获取文件和行号
+	
 	// ErrName string
 }
 
 
 // 实现基础的error接口
-func (e FunboostBaseError) Error() string {
-	return fmt.Sprintf("Code: %d, Message: %s", e.Code, e.Message)
+func (e BaseError) Error() string {
+	// return fmt.Sprintf("Code: %d, Message: %s  ,File: %s, Line: %d, Cause: %v", e.Code, e.Message,e.File,e.Line, e.Cause)
+	var causeStr string
+    if e.Cause != nil {
+        causeStr = fmt.Sprintf(", Cause: %v", e.Cause)
+    }
+    return fmt.Sprintf("Code: %d, Message: %s, FileLine: %s, cause: %s", 
+        e.Code, e.Message, e.GetFileLine(), causeStr)
 }
 
-func (e *FunboostBaseError) Unwrap() error {
+func (e *BaseError) Unwrap() error {
 	return e.Cause
 }
 
 // 基础的日志记录方法
-func (e FunboostBaseError) Log() {
+func (e BaseError) Log() {
+	// _, file, line, _ := runtime.Caller(1)  // 获取调用栈信息
 
 	e.Logger.Error(fmt.Sprintf("%v ",e.GetErrName()),
 		zap.Error(e),            // 记录完整错误
@@ -44,13 +54,13 @@ func (e FunboostBaseError) Log() {
 	)
 }
 
-func (e *FunboostBaseError) GetErrName() string {
+func (e *BaseError) GetErrName() string {
 	return "FunboostBaseError"
 }
 
 
 type BrokerNetworkError struct {
-	FunboostBaseError
+	BaseError
 }
 
 func (e *BrokerNetworkError) GetErrName() string {
@@ -58,33 +68,28 @@ func (e *BrokerNetworkError) GetErrName() string {
 }
 
 type FunboostRunError struct {
-	FunboostBaseError
+	BaseError
 }
 
 func (e *FunboostRunError) GetErrName() string {
 	return "FunboostRunError"
 }
 
-func NewBrokerNetworkError(message string, code int,cuase error, logger *zap.Logger) *BrokerNetworkError {
-	return &BrokerNetworkError{
-		FunboostBaseError: FunboostBaseError{
-			Message: message,
-			Code:    code,
-			Cause:   cuase,
-			Logger:  logger,
-		},
-	}
+func NewBrokerNetworkError(message string, code int,cause error, logger *zap.Logger) ErrorLog {
+	return NewError((*BrokerNetworkError)(nil),message, code, cause, logger)
 }
 
-func NewFunboostRunError(message string, code int, cause error,logger *zap.Logger) *FunboostRunError {
-	return &FunboostRunError{
-		FunboostBaseError: FunboostBaseError{
-			Message: message,
-			Code:    code,
-			Cause:   cause,
-			Logger:  logger,
-		},
-	}
+func NewFunboostRunError(message string, code int, cause error,logger *zap.Logger) ErrorLog {
+	return NewError((*FunboostRunError)(nil),message, code, cause, logger)
+	// return NewError(FunboostRunError{},message, code, cause, logger) //这个不好
+	// return &FunboostRunError{
+	// 	FunboostBaseError: FunboostBaseError{
+	// 		Message: message,
+	// 		Code:    code,
+	// 		Cause:   cause,
+	// 		Logger:  logger,
+	// 	},
+	// }
 }
 
 
@@ -92,19 +97,23 @@ func NewFunboostRunError(message string, code int, cause error,logger *zap.Logge
 
 // 统一错误创建入口（基于类型判断）
 func NewError(errType error, message string, code int, cause error, logger *zap.Logger) ErrorLog {
-    baseErr := FunboostBaseError{
+
+    baseErr := BaseError{
         Message: message,
         Code:    code,
         Cause:   cause,
         Logger:  logger,
+		GetFileLine: func() string {
+            _, file, line, _ := runtime.Caller(7)
+            return fmt.Sprintf("%s:%d", file, line)
+        },
     }
-
     // 通过类型断言设置错误类型
     switch errType.(type) {
     case *BrokerNetworkError:
-        return &BrokerNetworkError{FunboostBaseError: baseErr}
+        return &BrokerNetworkError{BaseError: baseErr}
     case *FunboostRunError:
-        return &FunboostRunError{FunboostBaseError: baseErr}
+        return &FunboostRunError{BaseError: baseErr}
     default:
         return &baseErr
     }

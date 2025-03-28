@@ -127,9 +127,9 @@ func main() {
 			Y: i * 2,
 		})
 
-		printValueBooster.Push(PrintParams{
-			Value: fmt.Sprintf("hello world %d", i),
-		})
+		// printValueBooster.Push(PrintParams{
+		// 	Value: fmt.Sprintf("hello world %d", i),
+		// })
 
 		// time.Sleep(100 * time.Millisecond)
 	}

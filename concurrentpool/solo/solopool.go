@@ -1,4 +1,4 @@
-package solopool
+package solo
 
 /**
 direct run a function ,not concurret ,but implement PoolSubmit interface

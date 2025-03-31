@@ -54,18 +54,7 @@ func printValue(params PrintParams) {
 // 	},
 // }
 
-// var baseOptions = core.BoostOptions{
-// 	BrokerKind:    core.MEMORY,
-// 	ConnNum:       5,
-// 	ConcurrentNum: 50,
-// 	QPSLimit:      2,
-// 	MaxRetries:    3,
-// 	Logger:        core.Logger,
-// 	BrokerConfig: core.Config{
-// 		BrokerTransportOptions: map[string]interface{}{
-// 			"memoryChanSize": 10000},
-// 	},
-// }
+
 
 var baseOptions = core.BoostOptions{
 	BrokerKind:    core.SQLITE,
@@ -80,6 +69,21 @@ var baseOptions = core.BoostOptions{
 	},
 	Logger: core.Logger,
 }
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.REDIS,
+// 	ConnNum:       5,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	BrokerConfig: core.Config{
+// 		BrokerUrl: "localhost:6379",
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"special1": 123,
+// 		},
+// 	},
+// 	Logger: core.Logger,
+// }
 
 // var baseOptions = core.BoostOptions{
 // 	BrokerKind:    core.RABBITMQ,

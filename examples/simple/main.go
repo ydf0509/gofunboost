@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 
 	"log"
 	"time"
@@ -23,12 +24,9 @@ func add(params AddParams) (int, error) {
 	result := params.X + params.Y
 	log.Printf("计算 %d + %d = %d\n", params.X, params.Y, result)
 	time.Sleep(1 * time.Second)
-	if params.X == 10 {
-		err := errors.New("test error")
+	if rand.Intn(100) > 95 {
+		err := errors.New("for test add error")
 		return 0, err
-	}
-	if params.X%10000 == 0 {
-		fmt.Println("x:", params.X)
 	}
 	return result, nil
 }
@@ -43,33 +41,45 @@ func printValue(params PrintParams) {
 	log.Printf("打印值: %v\n", params.Value)
 }
 
-var baseOptions = core.BoostOptions{
-	BrokerKind:    core.MEMORY,
-	ConnNum:       5,
-	ConcurrentNum: 50,
-	QPSLimit:      2,
-	MaxRetries:    3,
-	Logger:        core.Logger,
-	BrokerConfig: core.Config{
-		BrokerTransportOptions: map[string]interface{}{
-			"memoryChanSize": 10000},
-	},
-}
-
 // var baseOptions = core.BoostOptions{
-// 	BrokerKind:    core.REDIS,
+// 	BrokerKind:    core.MEMORY,
 // 	ConnNum:       5,
 // 	ConcurrentNum: 50,
 // 	QPSLimit:      2,
 // 	MaxRetries:    3,
+// 	Logger:        core.Logger,
 // 	BrokerConfig: core.Config{
-// 		BrokerUrl: "localhost:6379",
 // 		BrokerTransportOptions: map[string]interface{}{
-// 			"special1": 123,
-// 		},
+// 			"memoryChanSize": 10000},
 // 	},
-// 	Logger: core.Logger,
 // }
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.MEMORY,
+// 	ConnNum:       5,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	Logger:        core.Logger,
+// 	BrokerConfig: core.Config{
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"memoryChanSize": 10000},
+// 	},
+// }
+
+var baseOptions = core.BoostOptions{
+	BrokerKind:    core.SQLITE,
+	ConnNum:       5,
+	ConcurrentNum: 50,
+	QPSLimit:      2,
+	MaxRetries:    3,
+	BrokerConfig: core.Config{
+		BrokerTransportOptions: map[string]interface{}{
+			"sqlite_dir": "/sqlite_queues",
+		},
+	},
+	Logger: core.Logger,
+}
 
 // var baseOptions = core.BoostOptions{
 // 	BrokerKind:    core.RABBITMQ,
@@ -127,13 +137,13 @@ func main() {
 			Y: i * 2,
 		})
 
-		// printValueBooster.Push(PrintParams{
-		// 	Value: fmt.Sprintf("hello world %d", i),
-		// })
+		printValueBooster.Push(PrintParams{
+			Value: fmt.Sprintf("hello world %d", i),
+		})
 
 		// time.Sleep(100 * time.Millisecond)
 	}
-
+	fmt.Println("push finish")
 	select {}
 
 }

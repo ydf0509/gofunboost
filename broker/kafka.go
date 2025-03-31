@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	gopool "github.com/ydf0509/gofunboost/concurrentpool/solo"
 	"github.com/ydf0509/gofunboost/core"
 	"go.uber.org/zap"
 )
@@ -66,6 +67,7 @@ func (b *KafkaBroker) newBrokerCustomInit() {
 	if err != nil {
 		panic(err)
 	}
+	b.Pool = gopool.NewGoPool(1)
 }
 
 func (b *KafkaBroker) impConsumeUsingOneConn() error {

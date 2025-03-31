@@ -12,4 +12,6 @@ const (
 	MEMORY BrokerType = "memory"
 	// KAFKA 使用Kafka作为消息队列
 	KAFKA BrokerType = "kafka"
+	// SQLITE 使用SQLite作为消息队列
+	SQLITE BrokerType = "sqlite"
 )

@@ -67,6 +67,10 @@ func NewBroker(boostoptions core.BoostOptions) Broker {
 		memoryBroker := &MemoryBroker{BaseBroker: base}
 		memoryBroker.imp = memoryBroker
 		broker = memoryBroker
+	case core.SQLITE:
+		sqliteBroker := &SqliteBroker{BaseBroker: base}
+		sqliteBroker.imp = sqliteBroker
+		broker = sqliteBroker
 	default:
 		base.imp = base
 		broker = base

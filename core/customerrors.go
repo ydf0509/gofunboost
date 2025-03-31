@@ -32,8 +32,10 @@ func (e BaseError) Error() string {
     if e.Cause != nil {
         causeStr = fmt.Sprintf(", Cause: %v", e.Cause)
     }
-    return fmt.Sprintf("Code: %d, Message: %s, FileLine: %s, cause: %s", 
-        e.Code, e.Message, e.GetFileLine(), causeStr)
+    // return fmt.Sprintf("Code: %d, Message: %s, FileLine: %s, cause: %s", 
+    //     e.Code, e.Message, e.GetFileLine(), causeStr)
+	return fmt.Sprintf("Code: %d, Message: %s, cause: %s", 
+    e.Code, e.Message, causeStr)
 }
 
 func (e *BaseError) Unwrap() error {
@@ -43,6 +45,8 @@ func (e *BaseError) Unwrap() error {
 // 基础的日志记录方法
 func (e BaseError) Log() {
 	// _, file, line, _ := runtime.Caller(1)  // 获取调用栈信息
+	// pc, file, line, _ := runtime.Caller(1)
+    // fn := runtime.FuncForPC(pc)
 
 	e.Logger.Error(fmt.Sprintf("%v ",e.GetErrName()),
 		zap.Error(e),            // 记录完整错误
@@ -55,7 +59,7 @@ func (e BaseError) Log() {
 }
 
 func (e *BaseError) GetErrName() string {
-	return "FunboostBaseError"
+	return "BaseError"
 }
 
 

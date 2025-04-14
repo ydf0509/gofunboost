@@ -11,7 +11,7 @@ import (
 )
 
 // initLogger 初始化日志系统
-func initLogger() (*zap.Logger,*zap.SugaredLogger, error) {
+func InitLogger(filename string,level zapcore.Level) (*zap.Logger,*zap.SugaredLogger, error) {
 	// 创建日志目录
 	logDir := filepath.Join("/", "logs")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
@@ -19,7 +19,7 @@ func initLogger() (*zap.Logger,*zap.SugaredLogger, error) {
 	}
 
 	// 设置日志输出文件
-	logFile := filepath.Join(logDir, "gofunboost.log")
+	logFile := filepath.Join(logDir, filename)
 
 	// 配置日志切割
 	lumberJackLogger := &lumberjack.Logger{
@@ -65,14 +65,14 @@ func initLogger() (*zap.Logger,*zap.SugaredLogger, error) {
 	fileCore := zapcore.NewCore(
 		zapcore.NewJSONEncoder(fileEncoderConfig),
 		zapcore.AddSync(lumberJackLogger),
-		zapcore.InfoLevel,
+		level,
 	)
 
 	// 创建控制台输出核心
 	consoleCore := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(consoleEncoderConfig),
 		zapcore.AddSync(os.Stdout),
-		zapcore.InfoLevel,
+		level,
 	)
 
 	// 使用NewTee将两个Core合并
@@ -90,5 +90,5 @@ var Sugar *zap.SugaredLogger
 
 
 func init() {
-	Logger,Sugar, _ = initLogger()
+	Logger,Sugar, _ = InitLogger("gofunboost.log",zapcore.InfoLevel)
 }

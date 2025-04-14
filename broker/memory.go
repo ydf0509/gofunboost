@@ -48,6 +48,7 @@ func (b *MemoryBroker) Clear() error {
 			// 持续清空消息
 		default:
 			// 当通道为空时退出
+			b.Logger.Warn("Memory broker message channel cleared")
 			return nil
 		}
 	}

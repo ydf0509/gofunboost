@@ -40,6 +40,19 @@ func (b *MemoryBroker) impConsumeUsingOneConn() error {
 	}
 }
 
+func (b *MemoryBroker) Clear() error {
+	// 使用非阻塞方式清空消息通道
+	for {
+		select {
+		case <-b.msgChan:
+			// 持续清空消息
+		default:
+			// 当通道为空时退出
+			return nil
+		}
+	}
+}
+
 func (b *MemoryBroker) impSendMsg(msg string) error {
 	// 将消息字符串转换为Message对象
 	message := b.imp.Json2Message(msg)

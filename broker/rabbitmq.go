@@ -138,6 +138,26 @@ func (b *RabbitMQBroker) impConsumeUsingOneConn() error {
 	}
 }
 
+func (b *RabbitMQBroker) Clear() error {
+	// 创建一个新的channel用于清空队列
+	ch, err := b.createChannel()
+	if err != nil {
+		return err
+	}
+	defer ch.Close()
+
+	// 清空队列中的所有消息
+	_, err = ch.QueuePurge(b.QueueName, false) // false表示不等待服务器响应
+	if err != nil {
+		err2 := core.NewBrokerNetworkError(fmt.Sprintf("Failed to purge queue %s: %v", b.QueueName, err), 0, err, b.Logger)
+		err2.Log()
+		return err2
+	}
+
+	b.Sugar.Warnf("Successfully purged all messages from queue %s", b.QueueName)
+	return nil
+}
+
 func (b *RabbitMQBroker) impSendMsg(msg string) error {
 	err := b.channel.Publish(
 		"",          // exchange

@@ -26,6 +26,7 @@ func (b *RedisBroker) createRedisClient() (*redis.Client, error) {
 	// 创建带连接池配置的 Redis 客户端
 	rdb := redis.NewClient(&redis.Options{
 		Addr:         b.BrokerConfig.BrokerUrl,
+		DB:           b.BrokerConfig.BrokerTransportOptions["DB"].(int),
 		PoolSize:     100, // 最大连接数
 		MinIdleConns: 3,   // 最小闲置连接数
 	})
@@ -86,6 +87,19 @@ func (b *RedisBroker) impConsumeUsingOneConn() error {
 		// 使用协程池处理消息
 		b.Pool.Submit(func() { b.execute(&core.MessageWrapper{Msg: msg}) })
 	}
+}
+
+func (b *RedisBroker) Clear() error {
+	ctx := context.Background()
+	// 删除整个队列
+	_, err := b.RedisConn.Del(ctx, b.QueueName).Result()
+	if err != nil {
+		err2 := core.NewBrokerNetworkError(fmt.Sprintf("Failed to clear Redis queue: %v", err), 0, err, b.Logger)
+		err2.Log()
+		return err2
+	}
+	b.Sugar.Warnf("Successfully cleared Redis queue: %s", b.QueueName)
+	return nil
 }
 
 func (b *RedisBroker) impSendMsg(msg string) error {

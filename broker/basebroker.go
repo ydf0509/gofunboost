@@ -36,6 +36,8 @@ type Broker interface {
 
 	Json2Message(msgStr string) *core.Message
 
+	Clear() error
+
 	// Close 关闭Broker
 	// Close() error
 }
@@ -103,6 +105,10 @@ func (b *BaseBroker) Push(data interface{}) (*core.Message, error) {
 
 func GenTaskid() string {
 	return fmt.Sprintf("%013d_%07d", time.Now().UnixNano()/1e6, rand.Intn(10000000))
+}
+
+func (b *BaseBroker) Clear() error {
+	return core.NewFunboostRunError(fmt.Sprintf("Clear has no implementation %s", b.imp), 0, nil, b.Logger)
 }
 
 func (b *BaseBroker) Publish(msg *core.Message) (*core.Message, error) {

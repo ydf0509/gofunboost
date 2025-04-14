@@ -187,6 +187,23 @@ func (b *SqliteBroker) impConsumeUsingOneConn() error {
 	}
 }
 
+func (b *SqliteBroker) Clear() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	ctx := context.Background()
+	// 删除队列中的所有消息
+	_, err := b.DB.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", b.QueueName))
+	if err != nil {
+		err2 := core.NewBrokerNetworkError(fmt.Sprintf("Failed to clear SQLite queue %s: %v", b.QueueName, err), 0, err, b.Logger)
+		err2.Log()
+		return err2
+	}
+
+	b.Sugar.Warnf("Successfully cleared SQLite queue: %s", b.QueueName)
+	return nil
+}
+
 func (b *SqliteBroker) impSendMsg(msg string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()

@@ -80,7 +80,7 @@ var baseOptions = core.BoostOptions{
 	BrokerConfig: core.Config{
 		BrokerUrl: "localhost:6379",
 		BrokerTransportOptions: map[string]interface{}{
-			"special1": 123,
+			"DB": 15,
 		},
 	},
 	Logger: logger,

@@ -88,6 +88,12 @@ func (b *KafkaBroker) impConsumeUsingOneConn() error {
 	}
 }
 
+func (b *KafkaBroker) Clear() error {
+	b.Logger.Warn("Kafka clear queue,not need")
+	return nil
+}
+
+
 func (b *KafkaBroker) impSendMsg(msg string) error {
 	message := &sarama.ProducerMessage{
 		Topic:     b.QueueName,

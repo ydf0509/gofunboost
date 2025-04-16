@@ -1,0 +1,223 @@
+
+# 1. gofunboost 框架简介
+
+gofunboost 是一个基于 go 语言的支持多种broker的消费框架，主要目的是自动实现多种消息队列的分布式消费，并施加控制功能，例如并发数 qps控频 重试等功能。
+用户不需要再去关注怎么亲自操作消息队列。
+
+但功能没用python funboost那么丰富。
+
+
+# 2. gofunboost 框架设计
+
+为了练习go语言的项目设计，所以项目从一开始就设计成要支持轻松扩展任意种类的消息队列作为broker。
+
+这个和python的funboost一样，设计成轻松扩展现有和未来任意消息队列和各种数据库 磁盘模拟消息队列。
+
+只有把框架设计成兼容任何消息队列，才能考验代码设计实力，例如只实现rabbitmq或者只实现kafka 或者redis的消费，那么实现框架代码会容易很多，
+直接写就好了，不需要使用到模板方法模式或者策略模式。
+
+## 2.1 gofunboost 框架使用的设计模式 是 模板方法模式
+
+
+```
+我知道golang没有类，更没有父类 子类；所以不存在经典的模板方法模式。
+
+gofunboost仍然使用模板方法模式，来实现多种消息队列。
+各种具体的消息队列结构体匿名嵌入BaseBroker结构体，BaseBroker 结构体种有 Broker接口类型的imp字段。
+通过结构体自引用Broker接口类型，BaseBroker 轻松实现优先调用XXXBroker中重写的的方法，而不是BaseBroker结构体自身的方法。
+
+为了减少描述啰嗦，在这里我管 BaseBroker 叫父类，匿名嵌入BaseBroker结构体的 各种 XXXBroker 叫子类。
+```
+
+我个人喜欢使用模板方法模式，一气呵成，子类可以直接用父类方法和任何属性，可以重写任何父类方法，
+这比策略模式的使用组合写起来更爽快直观，代码也更少。
+
+
+
+## 2.2 设计这种兼容多种消息队列的消费框架，也可以用策略模式
+
+examples\deepseek\main.go 代码中也实现了兼容reids 和 rabbitmq 作为broker的消费框架。
+
+为了对比使用策略模式实现，我懒得亲自写了， 这是deepseek生成的。ai确实是好东西，自动生成代码。
+
+
+## 2.3 gofunboost 使用 trae ide 来生成代码。
+
+gofunboost的骨架是我设计的，我设计成模板方法模式。
+例如Basebroker是我设计的，然后在 trae ide 中使用claude3.5或3.7 大模型自动生成了使用各种具体的消息队列作为中间件代码。
+基本上一次就能生成正确。
+
+第一次生成项目框架一定要用 Claude 3.7，这个大模型更强虽然老是要排队和中断，但如果项目初骨架没设计好，后面扩展就会麻烦很多。
+有了几个中间件例子后，大模型新增中间件比较简单了，claude 3.5 sonnet 就足够了。
+
+Basebroker是我手动改了很多claude3.7代码，之后再用claude 3.5 写代码。
+
+只需要2天就能写完和调试了。
+
+如果要正式使用，可能还需要更加的打磨。但基本的 消费 重试 qps控频 并发 测试了没啥大问题。
+
+# 3 使用例子
+
+gofunboost 具体使用方式，当然没有python的 funboost装饰器一行那么简洁了，golang没有办法。
+
+但是gofunboost比gocelery和 go最知名的machinery 消费框架用法简单，代码少一丝丝。
+
+```golang
+package main
+
+import (
+	"errors"
+	"fmt"
+	"math/rand"
+
+	"log"
+	"time"
+
+	"github.com/ydf0509/gofunboost/broker"
+	"github.com/ydf0509/gofunboost/core"
+	"go.uber.org/zap/zapcore"
+)
+
+// core.Logger.SetLevel()
+var logger, _, _ = core.InitLogger("gofunboost.log",zapcore.WarnLevel)
+
+// 定义加法函数的参数结构体
+type AddParams struct {
+	X int
+	Y int
+}
+
+// 定义一个加法函数
+func add(params AddParams) (int, error) {
+	result := params.X + params.Y
+	log.Printf("计算 %d + %d = %d\n", params.X, params.Y, result)
+	time.Sleep(1 * time.Second)
+	if rand.Intn(100) > 95 {
+		err := errors.New("for test add error")
+		return 0, err
+	}
+	return result, nil
+}
+
+// 定义打印函数的参数结构体
+type PrintParams struct {
+	Value interface{}
+}
+
+// 定义一个打印函数
+func printValue(params PrintParams) {
+	log.Printf("打印值: %v\n", params.Value)
+}
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.MEMORY,
+// 	ConnNum:       5,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	Logger:        core.Logger,
+// 	BrokerConfig: core.Config{
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"memoryChanSize": 10000},
+// 	},
+// }
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.SQLITE,
+// 	ConnNum:       5,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	BrokerConfig: core.Config{
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"sqlite_dir": "/sqlite_queues",
+// 		},
+// 	},
+// 	Logger: core.Logger,
+// }
+
+var baseOptions = core.BoostOptions{
+	BrokerKind:    core.REDIS,
+	ConnNum:       5,
+	ConcurrentNum: 50,
+	QPSLimit:      2,
+	MaxRetries:    3,
+	BrokerConfig: core.Config{
+		BrokerUrl: "localhost:6379",
+		BrokerTransportOptions: map[string]interface{}{
+			"DB": 15,
+		},
+	},
+	Logger: logger,
+}
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.RABBITMQ,
+// 	ConnNum:       12,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	BrokerConfig: core.Config{
+// 		BrokerUrl: "amqp://admin:123456abc@1.0.1.2:5672/",
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"special1": 123,
+// 		},
+// 	},
+// 	Logger: core.Logger,
+// }
+
+// var baseOptions = core.BoostOptions{
+// 	BrokerKind:    core.KAFKA,
+// 	ConnNum:       5,
+// 	ConcurrentNum: 50,
+// 	QPSLimit:      2,
+// 	MaxRetries:    3,
+// 	BrokerConfig: core.Config{
+// 		BrokerUrl: "192.0.1.1:9092",
+// 		BrokerTransportOptions: map[string]interface{}{
+// 			"groupId": "gofunboost",
+// 		},
+// 	},
+// 	Logger: core.Logger,
+// }
+
+func main() {
+	// defer core.Sugar.Sync()
+	defer core.Logger.Sync()
+
+	addBooster := broker.NewBroker(core.MergeBoostOptions(core.BoostOptions{
+		QueueName:   "queue_test2",
+		ConsumeFunc: add,
+		QPSLimit:    -1,
+	}, baseOptions))
+
+	printValueBooster := broker.NewBroker(core.MergeBoostOptions(core.BoostOptions{
+		QueueName:   "queue_test33",
+		ConsumeFunc: printValue,
+		QPSLimit:    0.5}, baseOptions))
+
+	// 启动消费
+	addBooster.Consume()
+	printValueBooster.Consume()
+
+	// 推送消息
+	log.Println("start push")
+	for i := 0; i < 100000; i++ {
+		addBooster.Push(AddParams{
+			X: i,
+			Y: i * 2,
+		})
+
+		printValueBooster.Push(PrintParams{
+			Value: fmt.Sprintf("hello world %d", i),
+		})
+
+		// time.Sleep(100 * time.Millisecond)
+	}
+	log.Println("push finish")
+	fmt.Println("push finish")
+	select {}
+
+}
+
+```
